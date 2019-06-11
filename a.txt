@@ -1,0 +1,18 @@
+proc main()
+{
+	var n, nRebuilt - int;
+
+	n := 51423; ** numero a ser testado
+
+	>> A divis�o...dsnadaso
+		adjioasdhaios
+		smaidjasip
+	
+<<
+	nRebuilt := (n/2) * 2;
+
+	if (n = nRebuilt)
+		prnt('P', 'A', 'R');
+	else
+		prnt('I','M','P', 'A', 'R');
+}
