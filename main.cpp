@@ -1,8 +1,7 @@
-#include <iostream>
-#include <string>
-#include <vector>
+#include <bits/stdc++.h>
 
 using namespace std;
+
 
 enum{
     INT_LITERAL, CHAR_LITERAL, FLOAT_LITERAL, IDENTIFICADOR, OPERADOR_LOG_ARIT, OPERADOR_RELACIONAL, OPERADOR_ATRIBUICAO, SIMBOLO_ESPECIAL, PALAVRA_RESERV
@@ -29,6 +28,13 @@ class tokem{
         tipo = tip;
         tok = toke;
     }
+    bool operator<(const tokem& rhs) const{
+        if(this->linha <= rhs.linha){
+            return true;
+        }
+        return false;
+    }
+   
 };
 vector<tokem> v_tokens;
 vector<tokem> errosLex;
@@ -73,8 +79,12 @@ bool lerListaIdents();
 bool lerDeclVar();
 bool lerDeclGlobal();
 bool lerProgram();
+void imprimirLex();
+
+priority_queue<tokem> tabela;
 
 void tabelaDeSimbolos();
+
 
 int main(int argc, char const *argv[]){
 	char *nomeArq;
@@ -110,23 +120,33 @@ int main(int argc, char const *argv[]){
         }
         else{
             
-            tabelaDeSimbolos();
+            //tabelaDeSimbolos();
+            imprimirLex();
         }
     }
 
     //Testar se lexer funcionou imprimindo no arquivo
     // FILE *fp2;
     // fopen("saida.txt","w");
-    for(tokem t:v_tokens){
-        //fprintf(fp2,"\"%s\" na linha %d e coluna %d", t.tok , t.linha, t.coluna);
-        cout << "\""<< t.tok << "\" na linha "<< t.linha << " e coluna " << t.coluna << endl;
-    }
+    
+    
 
     fclose(fp);
     // fclose(fp2);
 	return 0;
 }
 
+void imprimirLex(){
+    for(tokem t:v_tokens){
+            //fprintf(fp2,"\"%s\" na linha %d e coluna %d", t.tok , t.linha, t.coluna);
+            cout << "\""<< t.tok << "\" na linha "<< t.linha << " e coluna " << t.coluna << endl;
+        }
+}
+
+
+
+
+using namespace std;
 void lexer(){
 	c_GLOBAL = getc(fp); coluna++;
     while(c_GLOBAL!=EOF){
@@ -344,7 +364,7 @@ bool eNumero(char c){
     return (c>47&&c<58);
 }
 bool eSimboloOuOperador(char c){
-    return ( (59<=c && c<=62) || (c==123) || (c==125) || (c==37) || (c==47) || (40 <= c && c <= 45) );
+    return ( (c>=58 && c<=62) || (c==123) || (c==125) || (c==37) || (c==47) || (c>=40 && c <= 45) );
 }
 
 
@@ -427,6 +447,7 @@ char lerNumeros(char c,char sinal){
         //Numero com expoente
         else if(c=='E'){
             s.push_back(c);
+            c = getc(fp); coluna++;
             while(eNumero(c)){
                 s.push_back(c);
                 c = getc(fp); coluna++;
@@ -496,7 +517,7 @@ char lerNumeros(char c,char sinal){
 char lerCoisaEstranha(string s){
     if(s[0] == EOF)
         return EOF;
-    coluna_atual = coluna;
+    coluna_atual = coluna - s.length();
     char c = getc(fp); coluna++;
     //Se nao for fim, espaço ou sinal
     while(!eEspaco(c) && !eSimboloOuOperador(c) && c!= EOF){
@@ -619,6 +640,7 @@ bool parser(){
 }
 
 bool lerExpBas(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("(") == 0){
@@ -628,6 +650,7 @@ bool lerExpBas(){
                 t = v_tokens[indice_v];
                 if(t.tok.compare(")") == 0){
                     indice_v++;
+                    // tabela.push(tokem(token_ini,indice_v,-1,"Expressao Basica\t"));
                     return true;
                 }
                 else{
@@ -646,24 +669,27 @@ bool lerExpBas(){
         else if(t.tok.compare("-") == 0){
             indice_v++;
             return lerExpBas();  
-        }
-        else if(t.tipo == INT_LITERAL || t.tipo == CHAR_LITERAL || t.tipo == FLOAT_LITERAL || t.tipo == IDENTIFICADOR){
-            indice_v++;
+        }else if(t.tipo == IDENTIFICADOR){
+            lerChamadaFunc();
+            // tabela.push(tokem(token_ini,indice_v,-1,"Expressao Basica\t"));
             return true;
         }
-        else if(lerChamadaFunc()){
+        else if(t.tipo == INT_LITERAL || t.tipo == CHAR_LITERAL || t.tipo == FLOAT_LITERAL ){
+            indice_v++;
+            // tabela.push(tokem(token_ini,indice_v,-1,"Expressao Basica\t"));
             return true;
         }
         else{
-            erroSint = tokem(t.linha,t.coluna,-1, "expressao basica");
+            // erroSint = tokem(t.linha,t.coluna,-1, "expressao basica");
             return false;
         }
     }
-    erroSint = tokem(linha,coluna,-1, "expressao basica");
+    // erroSint = tokem(linha,coluna,-1, "expressao basica");
     return false;
 }
 
 bool lerExp(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(lerExpBas()){
@@ -681,6 +707,7 @@ bool lerExp(){
                 }
             }
             else{
+                tabela.push(tokem(token_ini,indice_v,-1,"Expressao\t\t"));
                 return true;
             }
         }
@@ -693,6 +720,7 @@ bool lerExp(){
 }
 
 bool lerListaExp(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         if(lerExp()){
             tokem t = v_tokens[indice_v];
@@ -706,14 +734,17 @@ bool lerListaExp(){
         }
         else{
             //se nao for expressao significa que e' ler lista exp e' vazio, portanto retorna verdadeiro
+            tabela.push(tokem(token_ini,indice_v,-1,"Lista de Expressoes\t"));
             return true;
         } 
     }
     //se acabar os tokens ou nao for a opcao significa que e' vazio, portanto retorna verdadeiro
+    tabela.push(tokem(token_ini,indice_v,-1,"Lista de Expressoes\t"));
     return true;
 }
 
 bool lerChamadaFunc(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tipo == IDENTIFICADOR){
@@ -743,6 +774,7 @@ bool lerChamadaFunc(){
                     return false;
                 }
             }while(t.tipo == IDENTIFICADOR);
+            tabela.push(tokem(token_ini,indice_v,-1,"Chamada de Funcao\t"));
             return true;
         }
         else{
@@ -755,6 +787,7 @@ bool lerChamadaFunc(){
 }
 
 bool lerRetorno(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("return") == 0){
@@ -763,6 +796,7 @@ bool lerRetorno(){
                 t = v_tokens[indice_v];
                 if(t.tok.compare(";") == 0){
                     indice_v++;
+                    tabela.push(tokem(token_ini,indice_v,-1,"Retorno\t\t"));
                     return true;
                 }
                 else{
@@ -785,11 +819,13 @@ bool lerRetorno(){
 }
 
 bool lerChamadaFuncCmd(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         if(lerChamadaFunc()){
             tokem t = v_tokens[indice_v];
             if(t.tok.compare(";") == 0){
                 indice_v++;
+                tabela.push(tokem(token_ini,indice_v,-1,"Chamada de Funcao\t"));
                 return true;
             }
             else{
@@ -806,6 +842,7 @@ bool lerChamadaFuncCmd(){
 }
 
 bool lerEscrita(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("prnt")==0){
@@ -821,6 +858,7 @@ bool lerEscrita(){
                         t = v_tokens[indice_v];
                         if(t.tok.compare(";") == 0){
                             indice_v++;
+                            tabela.push(tokem(token_ini,indice_v,-1,"Escrita\t\t"));
                             return true;
                         }
                         else{
@@ -852,6 +890,7 @@ bool lerEscrita(){
 }
  
 bool lerDecisao(){
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("if")==0){
@@ -870,6 +909,7 @@ bool lerDecisao(){
                                 indice_v++;
                                 if(lerComando()){
                                     return true;
+                                    tabela.push(tokem(token_ini,indice_v,-1,"Decisao\t\t\t"));
                                 }
                                 else {
                                     return false;
@@ -878,6 +918,7 @@ bool lerDecisao(){
                             else{
                                 //Ele aceita se acabar aqui, portanto retorna true
                                 return true;
+                                tabela.push(tokem(token_ini,indice_v,-1,"Decisao\t\t\t"));
                             }
                         }
                         else{
@@ -908,6 +949,7 @@ bool lerDecisao(){
 }
 
 bool lerIteracao(){ 
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("while")==0){
@@ -922,6 +964,7 @@ bool lerIteracao(){
                         indice_v++;
                         if(lerComando()){
                             return true;
+                            tabela.push(tokem(token_ini,indice_v,-1,"Iteracao\t\t\t"));
                         }
                         else{
                             return false;
@@ -951,6 +994,7 @@ bool lerIteracao(){
 }
 
 bool lerAtribuicao(){ 
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tipo == IDENTIFICADOR){
@@ -963,6 +1007,7 @@ bool lerAtribuicao(){
                     if(t.tok.compare(";")==0){
                         indice_v++;
                         return true;
+                        tabela.push(tokem(token_ini,indice_v,-1,"Atribuicao\t\t"));
                     }
                     else{
                         erroSint = tokem(t.linha,t.coluna,-1, ";");
@@ -987,6 +1032,7 @@ bool lerAtribuicao(){
 }
 
 bool lerComando(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("var") == 0){
@@ -1029,6 +1075,7 @@ bool lerComando(){
 }
 
 bool lerListaCom(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         //Apenas blocos utilizam listaCom, e ele acaba com '}', portanto e' lo'gico dizer que enquanto nao encontrar um '}', o tokem lido deve fazer parte de um comando
@@ -1039,12 +1086,14 @@ bool lerListaCom(){
             t = v_tokens[indice_v];
         }
         return true;
+        tabela.push(tokem(token_ini,indice_v,-1,"Lista Comandos\t"));
     }
     erroSint = tokem(linha,coluna,-1, "comando");
     return false;
 }
 
 bool lerBloco(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("{") == 0){
@@ -1054,6 +1103,7 @@ bool lerBloco(){
                 if(t.tok.compare("}") == 0){
                     indice_v++;
                     return true;
+                    tabela.push(tokem(token_ini,indice_v,-1,"Bloco\t\t\t"));
                 }
                 else{
                     erroSint = tokem(t.linha,t.coluna,-1, "}");
@@ -1074,6 +1124,7 @@ bool lerBloco(){
 }
 
 bool lerParamFormais(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
 
@@ -1096,6 +1147,7 @@ bool lerParamFormais(){
         else{
             //pode ser vazio
             return true;
+            tabela.push(tokem(token_ini,indice_v,-1,"Parametros Formais\t"));
         } 
 
 
@@ -1123,12 +1175,14 @@ bool lerParamFormais(){
                 return false;
             } 
         }
+        tabela.push(tokem(token_ini,indice_v,-1,"Parametros Formais\t"));
         return true;
     }
     //pode ser vazio
     return true;
 }
 bool lerNomeArgs(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         do{
@@ -1163,6 +1217,7 @@ bool lerNomeArgs(){
                 return false;
             }
         }while(t.tipo== IDENTIFICADOR);
+        tabela.push(tokem(token_ini,indice_v,-1,"Nome Args\t\t"));
         return true;
         
     }
@@ -1171,6 +1226,7 @@ bool lerNomeArgs(){
 }
 
 bool lerDeclFunc(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("proc")==0){
@@ -1184,6 +1240,7 @@ bool lerDeclFunc(){
                     indice_v++;
                     if(lerTipo()){
                         if(lerBloco()){
+                            tabela.push(tokem(token_ini,indice_v,-1,"Declaracao de Funcao\t"));
                             return true;
                         }
                         else{
@@ -1214,10 +1271,12 @@ bool lerDeclFunc(){
 }
 
 bool lerTipo(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if((t.tok.compare("int") == 0) || (t.tok.compare("char") == 0) || (t.tok.compare("float") == 0)){
             indice_v++;
+            tabela.push(tokem(token_ini,indice_v,-1,"Tipo\t\t\t"));
             return true;
         }
         else{
@@ -1230,6 +1289,7 @@ bool lerTipo(){
 }
 
 bool lerListaIdents(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
 
@@ -1257,12 +1317,14 @@ bool lerListaIdents(){
             } 
         }
         return true;
+        tabela.push(tokem(token_ini,indice_v,-1,"Lista Identificadores"));
     }
     erroSint = tokem(linha,coluna,-1, "identificador de variavel");
     return false;
 }
 
 bool lerDeclVar(){  
+    int token_ini = indice_v;
     if(indice_v < v_tokens.size()){
         tokem t = v_tokens[indice_v];
         if(t.tok.compare("var")==0){
@@ -1276,6 +1338,7 @@ bool lerDeclVar(){
                         t = v_tokens[indice_v];
                         if(t.tok.compare(";")==0){
                             indice_v++;
+                            tabela.push(tokem(token_ini,indice_v,-1,"Declaracao de Variavel"));
                             return true;
                         }
                         else{
@@ -1334,5 +1397,51 @@ bool lerProgram(){
 
 
 void tabelaDeSimbolos(){
+    cout << "TABELA DE SIMBOLOS: " << endl;
+    cout << "| TIPO DO SIMBOLO\t\t || TOKENS " << endl;
 
+    while(!tabela.empty()){
+        tokem t = tabela.top();
+        tabela.pop();
+        
+        //t.tok = Tipo do simbolo
+        cout<< "| " << t.tok <<"\t || \" ";
+        
+        //t.linha = tokem inicial
+        //t.coluna = tokem final
+
+        int i = t.linha;
+        bool maiorQue30 = false;
+        //so imprime 30 tokens
+        if((t.coluna-i)>30){
+            maiorQue30 = true;
+        }
+        if(!maiorQue30){
+            while(i<t.coluna){
+                cout << v_tokens[i].tok << " ";
+                i++;
+            }
+            cout<< "\"" << endl;
+        }
+        else{
+            int j = 0;
+            //imprime os 20 tokens iniciais
+            while(j<20){
+                cout << v_tokens[i].tok << " ";
+                i++;
+                j++;
+            }
+            cout<< "  [...]  ";
+
+            //imprime os 10 tokens finais
+            j = t.coluna - 10;
+            while(j<t.coluna){
+                cout << v_tokens[i].tok << " ";
+                i++;
+                j++;
+            }
+            cout<< "\"" << endl;
+        }
+    }
+    cout << endl << endl;
 }

@@ -1,3 +1,52 @@
+**exemplo 3
+proc main()
+{
+	var x, y - int;
+	var m- int;
+
+	x:= 120; >>jioadfhaso<<
+	y:= 640; >>sss<<
+
+	m:= mdcDe (x) e (y);
+
+	prnt('m', 'd', 'c' , '(');
+	prnt(x);
+	prnt(',');
+	prnt(y);
+	prnt(')');
+	prnt(m);
+	x := 12,5E26,5;
+}
+>>
+**exemplo 2
+var n, soma - int;
+
+proc main()
+{
+	var result - int;
+	result := soma(9)primeirosImpares();
+
+	prnt(result);
+
+}
+
+proc soma (n-int )primeirosImpares() - int{
+	var i , proxImpar, result - int;
+
+	resultado := 0;
+	i:= 0;
+
+	while (i < n){
+		proxImpar :=2*i+1; **8asjdioasjdfoipas
+		resultado:= resultado + proxImpar;
+		i := i+1;
+	}
+	return resultado;
+}
+
+
+
+**exemplo 1
 proc main()
 {
 	var n, nRebuilt - int;
@@ -8,11 +57,11 @@ proc main()
 		adjioasdhaios
 		smaidjasip
 	
-<<
+<<>>
 	nRebuilt := (n/2) * 2;
 
 	if (n = nRebuilt)
 		prnt('P', 'A', 'R');
 	else
 		prnt('I','M','P', 'A', 'R');
-}
+}<<
